@@ -9,21 +9,22 @@ from datalog import Sensor
 
 # Configurar pines
 led = Pin('LED', Pin.OUT)
-foco = Pin(13, Pin.OUT)
-btn4 = Pin(19, Pin.IN, Pin.PULL_DOWN)
-btn3 = Pin(18, Pin.IN, Pin.PULL_DOWN)
-btn2 = Pin(21, Pin.IN, Pin.PULL_DOWN)
-btn1 = Pin(20, Pin.IN, Pin.PULL_DOWN)
+ledB = Pin(12, Pin.OUT)
+btn4 = Pin(18, Pin.IN, Pin.PULL_DOWN)
+btn3 = Pin(19, Pin.IN, Pin.PULL_DOWN)
+btn2 = Pin(20, Pin.IN, Pin.PULL_DOWN)
+btn1 = Pin(21, Pin.IN, Pin.PULL_DOWN)
 ledR = Pin(6, Pin.OUT)
 ledG = Pin(7, Pin.OUT)
-ledB = Pin(8, Pin.OUT)
+foco = Pin(10, Pin.OUT)
 
 # Variables globales
 RGB = 0
 nmed = 100
 nmedonoff = True
 VlampOnOff = 1
-
+# Definir UsuarioID aquí
+UsuarioID = "User1"  
 # Inicializar objetos
 pinadc = 26  # Pin del LM35
 pinsetpoint = 27  # Pin del ADC del setpoint
@@ -40,7 +41,7 @@ def map_value(value, in_min, in_max, out_min, out_max):
 
 # Función para enviar datos
 def handleSubmit():
-    global VlampOnOff  # Declarar VlampOnOff como variable global
+    global VlampOnOff, UsuarioID  # Declarar VlampOnOff e UsuarioID como variable global
     ledR.toggle()  # indica se enviara un registro al servidor de DB
     # Leer valores de los sensores
     lamp_id = "lamp1"  # Puedes cambiar este ID según tus necesidades
@@ -113,12 +114,12 @@ def handle_interrupt(pin):
 btn4.irq(trigger=Pin.IRQ_RISING, handler=handle_interrupt)
 
 # Bucle principal
-estadoFoco=0
+estadoFoco = 0
 while True:
     led.toggle()
-    #estadoFoco=handleReadAvanzado()
+    estadoFoco = handleReadAvanzado("lamp1")
     #handleSubmit()
-    VlampOnOff=estadoFoco
+    VlampOnOff = estadoFoco
     if VlampOnOff == 1:
         ledB.value(0)
         foco.value(0)
@@ -126,3 +127,5 @@ while True:
         ledB.value(1)
         foco.value(1)
     time.sleep(1)
+
+
