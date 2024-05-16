@@ -5,11 +5,61 @@ from PIL import Image, ImageTk  # Importar PIL
 
 # Configuración de la base de datos
 config_db = {
-    'user': 'usuario0',
-    'password': '',
-    'host': 'localhost',
-    'database': 'DB_IoTLampV0',
+    'user': 'root',  # Cambia esto por tu nombre de usuario MySQL
+    'password': '',  # Cambia esto por tu contraseña MySQL
+    'host': 'localhost',  # Cambia esto si tu servidor MySQL está en otra dirección
+    'database': 'DB_ECOLampV0',  # Cambia esto por el nombre de tu base de datos
 }
+estadoLamp = 0
+
+# Función para actualizar el campo LampOnOff en la base de datos
+def actualizar_lamp_onoff(user_id, lamp_id, estado):
+    global estadoLamp
+    nuevo_estado_lamp = 2 if estado else 1
+
+    # Conectar a la base de datos
+    conn = mysql.connector.connect(**config_db)
+    cursor = conn.cursor()
+
+    # Consulta para obtener el ID del último registro ingresado basado en LampID y UsuarioID
+    consulta_id = """
+        SELECT Nreg, LampOnOff
+        FROM T_ECOLampV0
+        WHERE LampID = %s AND UsuarioID = %s
+        ORDER BY fecha_creacion DESC
+        LIMIT 1
+    """
+
+    # Ejecuta la consulta para obtener el ID del último registro
+    cursor.execute(consulta_id, (lamp_id, user_id))
+    resultado = cursor.fetchone()
+    print(resultado)
+    # Verifica si se encontró un registro
+    if resultado:
+        nreg = resultado[0]
+        estadoLamp = resultado[1]
+        # Consulta para actualizar el valor de LampOnOff en el último registro
+        consulta_update = """
+            UPDATE T_ECOLampV0
+            SET LampOnOff = %s
+            WHERE Nreg = %s
+        """
+        
+        # Ejecuta la consulta para actualizar el campo LampOnOff
+        cursor.execute(consulta_update, (nuevo_estado_lamp, nreg))
+
+        # Confirma los cambios en la base de datos
+        conn.commit()
+
+        # Mostrar mensaje de éxito
+        messagebox.showinfo("Éxito", f"El valor de LampOnOff del registro con Nreg = {nreg} ha sido actualizado a {nuevo_estado_lamp}")
+    else:
+        # Mostrar mensaje de error si no se encuentra un registro con LampID y UsuarioID
+        messagebox.showerror("Error", f"No se encontró ningún registro con LampID = {lamp_id} y UsuarioID = {user_id}")
+
+    # Cierra el cursor y la conexión a la base de datos
+    cursor.close()
+    conn.close()
 
 # Crear la GUI con tkinter
 root = tk.Tk()
@@ -55,40 +105,24 @@ off = ImageTk.PhotoImage(off_image_with_bg)
 # Define our switch function
 def switch():
     global is_on
+    user_id = entry_user_id.get()
     lamp_id = entry_lamp_id.get()
-    if lamp_id:
+    if user_id and lamp_id:
         nuevo_estado = not is_on
-        actualizar_lamp_onoff(lamp_id, nuevo_estado)
+        actualizar_lamp_onoff(user_id, lamp_id, nuevo_estado)
         if is_on:
             on_button.config(image=off)
             is_on = False
         else:
             on_button.config(image=on)
             is_on = True
+    else:
+        messagebox.showwarning("Advertencia", "Por favor, ingrese tanto UserID como LampID")
 
-def actualizar_lamp_onoff(lamp_id, estado):
-    nuevo_estado_lamp = 1 if estado else 0
-    conn = mysql.connector.connect(**config_db)
-    cursor = conn.cursor()
-    consulta_update = """
-        UPDATE T_IoTLampV0
-        SET LampOnOff = %s
-        WHERE LampID = %s
-    """
-    cursor.execute(consulta_update, (nuevo_estado_lamp, lamp_id))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    messagebox.showinfo("Éxito", f"Estado actualizado a {'Encendido' if estado else 'Apagado'}")
-
-# Create A Button
+# Crear el botón de encendido/apagado
 on_button = tk.Button(root, image=on, bd=0, command=switch)
 on_button.grid(row=3, column=1, pady=10)
 
-
-# Botón para actualizar LampOnOff
-#boton_actualizar = tk.Button(root, text="Actualizar", command=actualizar_lamp_onoff, bg='#4CAF50', fg='white', font=('Arial', 12))
-#boton_actualizar.grid(row=4, column=0, columnspan=3, pady=10)
-
 # Ejecutar la aplicación
 root.mainloop()
+

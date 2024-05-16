@@ -13,7 +13,7 @@ if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
-// Verificar si se ha recibido el parámetro LampID en la solicitud GET
+// Verificar si se ha recibido el parámetro LampID y UsuarioID en la solicitud GET
 if (isset($_GET['LampID']) && isset($_GET['UsuarioID'])) {
     $lampID = $conn->real_escape_string($_GET['LampID']);
     $usuarioID = $conn->real_escape_string($_GET['UsuarioID']);
@@ -30,6 +30,8 @@ if (isset($_GET['LampID']) && isset($_GET['UsuarioID'])) {
         // Obtener el último registro y agregarlo al array
         $row = $result->fetch_assoc();
         $datos = $row;
+    } else {
+        $datos["error"] = "No se encontraron registros para LampID y UsuarioID proporcionados";
     }
 
     // Cerrar la conexión a la base de datos
