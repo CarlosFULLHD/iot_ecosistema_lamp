@@ -1,75 +1,128 @@
-import mysql.connector as mysql
+import mysql.connector
 import pandas as pd
 import numpy as np
 from bokeh.plotting import figure
 import panel as pn
+import threading
+import time
 
-# Inicialización de las extensiones de visualización
 pn.extension()
 
-# Datos para conectar a la base de datos
-configuracion_db = {
+# Configuración de la base de datos
+db_config = {
     'host': 'localhost',
     'user': 'root',
     'password': '',
-    'database': 'DB_IoTLampV0'
+    'database': 'DB_ECOLampV0'
 }
 
-# Recuperar registros de la base de datos
-def recuperar_registros(identificador_lampara):
-    conexion = mysql.connect(**configuracion_db)
-    cursor = conexion.cursor()
-    query = "SELECT fecha_creacion, LampOnOff, temp_value FROM T_IoTLampV0 WHERE LampID = %s"
-    cursor.execute(query, (identificador_lampara,))
-    registros = cursor.fetchall()
+# Función para obtener datos de la lámpara específica
+def obtener_datos(lamp_id):
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    consulta = f"SELECT fecha_creacion, LampOnOff, temp_value, wh_por_hora FROM T_ECOLampV0 WHERE LampID = %s"
+    cursor.execute(consulta, (lamp_id,))
+    data = cursor.fetchall()
     cursor.close()
-    conexion.close()
-    if not registros:
+    conn.close()
+    if not data:
+        print("No se encontraron datos.")
         return pd.DataFrame()
-    return pd.DataFrame(registros, columns=['fecha_creacion', 'LampOnOff', 'temp_value'])
+    df = pd.DataFrame(data, columns=['fecha_creacion', 'LampOnOff', 'temp_value', 'wh_por_hora'])
+    df['fecha_creacion'] = pd.to_datetime(df['fecha_creacion'])
+    return df
 
-# Generar gráficas a partir de los datos
-def generar_graficas(id_lampara):
-    datos_lampara = recuperar_registros(id_lampara)
-    if datos_lampara.empty:
-        return pn.pane.Markdown("No hay datos disponibles para este ID.")
-    datos_lampara['fecha_creacion'] = pd.to_datetime(datos_lampara['fecha_creacion'])
-    grafico_linea1 = figure(title="Estado de la Lámpara", x_axis_type="datetime", sizing_mode='stretch_width')
-    grafico_linea1.line(datos_lampara['fecha_creacion'], datos_lampara['LampOnOff'], color='green', legend_label='On/Off')
-    grafico_linea2 = figure(title="Temperatura Registrada", x_axis_type="datetime", sizing_mode='stretch_width')
-    grafico_linea2.line(datos_lampara['fecha_creacion'], datos_lampara['temp_value'], color='red', legend_label='Temperatura')
-    
-    hist_estado, bordes_estado = np.histogram(datos_lampara['LampOnOff'], bins=np.arange(0, 3) - 0.5)
-    grafico_hist_estado = figure(title="Histograma de Estados", height=250, sizing_mode='stretch_width')
-    grafico_hist_estado.quad(top=hist_estado, bottom=0, left=bordes_estado[:-1], right=bordes_estado[1:], fill_color="blue")
+# Función para actualizar el estado de la lámpara
+def toggle_estado_lampara(event):
+    lamp_id = lamp_id_input.value
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    consulta = "SELECT Nreg, LampOnOff FROM T_ECOLampV0 WHERE LampID = %s ORDER BY fecha_creacion DESC LIMIT 1"
+    cursor.execute(consulta, (lamp_id,))
+    resultado = cursor.fetchone()
+    if resultado:
+        nuevo_estado = 1 if resultado[1] == 2 else 2
+        update_consulta = "UPDATE T_ECOLampV0 SET LampOnOff = %s WHERE Nreg = %s"
+        cursor.execute(update_consulta, (nuevo_estado, resultado[0]))
+        conn.commit()
+        estado_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Estado Actual Foco: {'Encendido' if nuevo_estado == 2 else 'Apagado'}</div>"
+        toggle_button.button_type = 'success' if nuevo_estado == 2 else 'danger'
+    cursor.close()
+    conn.close()
+    update_dashboard(None)
 
-    hist_temp, bordes_temp = np.histogram(datos_lampara['temp_value'], bins=15)
-    grafico_hist_temp = figure(title="Histograma de Temperatura", height=250, sizing_mode='stretch_width')
-    grafico_hist_temp.quad(top=hist_temp, bottom=0, left=bordes_temp[:-1], right=bordes_temp[1:], fill_color="orange")
-    
-    graficos = pn.Column(grafico_linea1, grafico_linea2)
-    histogramas = pn.Column(grafico_hist_estado, grafico_hist_temp)
-    return pn.Tabs(("Líneas", graficos), ("Histogramas", histogramas))
+# Función para actualizar el dashboard
+def update_dashboard(event):
+    lamp_id = lamp_id_input.value
+    new_graphics = crear_graficos(lamp_id)
+    dashboard_objects[-1].clear()
+    dashboard_objects[-1].append(new_graphics)
 
-entrada_lamp_id = pn.widgets.TextInput(name='ID de Lámpara', value='lamp1')
-boton_refresco = pn.widgets.Button(name='Refrescar', button_type='primary')
-estado_visual = pn.pane.Markdown("<div style='font-size: 20px;'>Estado de la Lámpara: Desconocido</div>")
-paneles_dashboard = [pn.Row(entrada_lamp_id, boton_refresco, estado_visual), pn.Row()]
+# Función para crear gráficos
+def crear_graficos(lamp_id):
+    datos = obtener_datos(lamp_id)
+    if datos.empty:
+        return pn.pane.Markdown("No se encontraron datos para el LampID proporcionado.")
 
-# Configuración del evento de clic para actualizar el panel
-def actualizar_panel(event):
-    paneles_dashboard[1].objects = [generar_graficas(entrada_lamp_id.value)]
-boton_refresco.on_click(actualizar_panel)
+    # Creación de gráficos
+    p1 = figure(title="Relación fecha_creacion con LampOnOff", x_axis_type="datetime", sizing_mode="stretch_width", height=250)
+    p1.line(datos['fecha_creacion'], datos['LampOnOff'], legend_label='Estado de la Lámpara', line_color='#b4b4dc')
 
-dashboard_completo = pn.Column(*paneles_dashboard, sizing_mode='stretch_width')
-dashboard_completo.servable(title="Controlador de Lámpara IoT")
-pn.serve(dashboard_completo)
+    p3 = figure(title="Relación fecha_creacion con temp_value", x_axis_type="datetime", sizing_mode="stretch_width", height=250)
+    p3.line(datos['fecha_creacion'], datos['temp_value'], legend_label='Valor Temperatura', line_color='#b4b4dc')
 
-# Configuración del servidor para permitir accesos desde IPs específicas
-allowed_origins = [
-    '0.0.0.0:5006',
-    'localhost:5006'
+    hist, edges = np.histogram(datos['LampOnOff'], bins=np.arange(0, 3) - 0.5, density=True)
+    p2 = figure(title="Histograma de LampOnOff", sizing_mode="stretch_width", height=250)
+    p2.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#b4b4dc")
+
+    hist_temp, edges_temp = np.histogram(datos['temp_value'], bins=15, density=True)
+    p4 = figure(title="Histograma de temp_value", sizing_mode="stretch_width", height=250)
+    p4.quad(top=hist_temp, bottom=0, left=edges_temp[:-1], right=edges_temp[1:], fill_color="#b4b4dc")
+
+    total_kwh = datos['wh_por_hora'].sum() / 1000
+    vida_util = max(0, (1000 - datos['LampOnOff'].sum()) / 10)
+    consumo_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Consumo total en kWh: {total_kwh} kWh</div>"
+    vida_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Tiempo de vida: {vida_util}%</div>"
+
+    if vida_util < 10:
+        vida_label.styles = {'color': 'red'}
+    else:
+        vida_label.styles = {'color': 'black'}
+
+    line_charts = pn.Column(p1, p3)
+    histogram_charts = pn.Column(p2, p4)
+    tabs = pn.Tabs(("Gráficos de Línea", line_charts), ("Histogramas", histogram_charts))
+    return tabs
+
+# Función para actualizar el dashboard automáticamente cada 5 segundos
+def auto_update_dashboard():
+    while True:
+        time.sleep(5)
+        update_dashboard(None)
+
+# Configuración de componentes y dashboard
+lamp_id_input = pn.widgets.TextInput(name='LampID', value='lamp1')
+user_id_input = pn.widgets.TextInput(name='UserID', value='user1')
+update_button = pn.widgets.Button(name='Actualizar Dashboard', button_type='primary')
+toggle_button = pn.widgets.Button(name='Estado Foco', button_type='success')
+estado_label = pn.pane.Markdown("<div style='font-size: 20px; font-weight: bold;'>Estado Actual Foco: Desconocido</div>")
+consumo_label = pn.pane.Markdown("<div style='font-size: 20px; font-weight: bold;'>Consumo total en kWh: Desconocido</div>")
+vida_label = pn.pane.Markdown("<div style='font-size: 20px; font-weight: bold;'>Tiempo de vida: Desconocido</div>")
+
+update_button.on_click(update_dashboard)
+toggle_button.on_click(toggle_estado_lampara)
+
+dashboard_objects = [
+    pn.Row(lamp_id_input, user_id_input, update_button, toggle_button),
+    pn.Row(estado_label, consumo_label, vida_label),
+    pn.Column(crear_graficos(lamp_id_input.value))
 ]
+dashboard = pn.Column(*dashboard_objects)
 
-# Servir el dashboard permitiendo el acceso desde el celular y otros dispositivos
-pn.serve(dashboard_completo, port=5006, address='0.0.0.0', allow_websocket_origin=allowed_origins)
+# Iniciar el hilo para actualizar el dashboard automáticamente
+threading.Thread(target=auto_update_dashboard, daemon=True).start()
+
+# Servir el dashboard
+dashboard.servable(title="Dashboard de la Lámpara IoT")
+pn.serve(dashboard)
+
