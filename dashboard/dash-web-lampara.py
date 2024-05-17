@@ -125,8 +125,10 @@ def crear_graficos(lamp_id, usuario_id):
         p4.quad(top=hist_temp, bottom=0, left=edges_temp[:-1], right=edges_temp[1:], fill_color="#b4b4dc")
 
         total_kwh = datos_lamp['wh_por_hora'].sum() / 1000
-        vida_util = max(0, (1000 - datos_lamp['LampOnOff'].sum()) / 10)
-        consumo_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Consumo total en kWh: {total_kwh} kWh</div>"
+        costo_total = total_kwh * 0.84
+        horas_utilizadas = datos_lamp['LampOnOff'].sum()
+        vida_util = max(0, (1000 - horas_utilizadas) / 10)
+        consumo_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Consumo total en kWh: {total_kwh} kWh (Bs {costo_total:.2f})</div>"
         vida_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Tiempo de vida: {vida_util}%</div>"
 
         if vida_util < 10:
@@ -194,3 +196,4 @@ threading.Thread(target=auto_update_dashboard, daemon=True).start()
 # Servir el dashboard
 dashboard.servable(title="Dashboard de la Lámpara IoT")
 pn.serve(dashboard)
+
