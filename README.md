@@ -39,7 +39,7 @@ La base de datos se llama `DB_ECOLampV0` y contiene una tabla `T_ECOLampV0` con 
 - `temp_int`: Valor entero de temperatura.
 - `sep_point`: Punto de separación.
 - `LampOnOff`: Estado de la lámpara (encendido/apagado).
-- `wh_per_hour`: Consumo en watts por hora.
+- `wh_por_hora`: Consumo en watts por hora.
 
 ### Funcionalidades
 
@@ -65,7 +65,7 @@ La base de datos se llama `DB_ECOLampV0` y contiene una tabla `T_ECOLampV0` con 
        temp_value FLOAT NOT NULL,
        temp_int INT NOT NULL,
        sep_point INT NOT NULL,
-       LampOnOff INT NOT NULL,
-       wh_per_hour FLOAT NOT NULL
+       wh_por_hora FLOAT NOT NULL,
+       LampOnOff INT NOT NULL
    );
    ```
