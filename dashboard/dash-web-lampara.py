@@ -88,6 +88,8 @@ def crear_graficos(lamp_id, usuario_id):
     # Convertir las fechas a formato timestamp para ticks
     tick_values = [datos_lamp['fecha_creacion'][i] for i in range(0, len(datos_lamp), max(1, len(datos_lamp)//10))]
     tick_timestamps = [x.timestamp() * 1000 for x in tick_values]
+    tick_values1 = [datos_usuario['fecha_creacion'][i] for i in range(0, len(datos_lamp), max(1, len(datos_lamp)//10))]
+    tick_timestamps1 = [x.timestamp() * 1000 for x in tick_values]
 
     tabs = []
 
@@ -155,6 +157,16 @@ def crear_graficos(lamp_id, usuario_id):
 
         p6 = figure(title="Relación fecha_creacion con UsuarioID", x_axis_type="datetime", sizing_mode="stretch_width", height=250)
         p6.line(datos_usuario['fecha_creacion'], datos_usuario['UsuarioID'], legend_label='UsuarioID', line_color='#b4b4dc')
+        p6.xaxis.formatter = DatetimeTickFormatter(
+            hours="%H:%M",
+            minutes="%H:%M",
+            seconds="%H:%M:%S"
+        )
+        p6.xaxis.ticker = FixedTicker(ticks=tick_timestamps1)
+        p6.xaxis.major_label_orientation = 3.14 / 4  # Rota las etiquetas para mejor legibilidad
+        p6.xaxis.major_label_overrides = {tick: pd.to_datetime(tick/1000, unit='s').strftime('%H:%M') for tick in tick_timestamps}
+
+
 
         hist_lamp_user, edges_lamp_user = np.histogram(datos_usuario['LampID'], bins=15, density=True)
         p7 = figure(title="Histograma de UsuarioID Vs LampID", sizing_mode="stretch_width", height=250)
