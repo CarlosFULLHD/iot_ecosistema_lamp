@@ -1,7 +1,7 @@
 import mysql.connector
 import pandas as pd
 import numpy as np
-from bokeh.plotting import figure, show
+from bokeh.plotting import figure
 from bokeh.models import DatetimeTickFormatter, FixedTicker
 from bokeh.palettes import Category20c
 from bokeh.transform import cumsum
@@ -9,7 +9,6 @@ import panel as pn
 import threading
 import time
 from math import pi
-
 
 from bokeh.models import ColumnDataSource, HoverTool
 
@@ -60,26 +59,37 @@ def obtener_datosusuario(usuario_id):
     df['fecha_creacion'] = pd.to_datetime(df['fecha_creacion'])
     return df
 
+
+def obtener_estado_lampara(lamp_id):
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    consulta = "SELECT LampOnOff FROM T_ECOLampV0 WHERE LampID = %s ORDER BY fecha_creacion DESC LIMIT 1"
+    cursor.execute(consulta, (lamp_id,))
+    resultado = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if resultado:
+        return resultado[0]
+    return None
+
 # Función para actualizar el estado de la lámpara
 
 
 def toggle_estado_lampara(event):
     lamp_id = lamp_id_input.value
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    consulta = "SELECT Nreg, LampOnOff FROM T_ECOLampV0 WHERE LampID = %s ORDER BY fecha_creacion DESC LIMIT 1"
-    cursor.execute(consulta, (lamp_id,))
-    resultado = cursor.fetchone()
-    if resultado:
-        nuevo_estado = 1 if resultado[1] == 2 else 2
-        update_consulta = "UPDATE T_ECOLampV0 SET LampOnOff = %s WHERE Nreg = %s"
-        cursor.execute(update_consulta, (nuevo_estado, resultado[0]))
+    estado_actual = obtener_estado_lampara(lamp_id)
+    if estado_actual is not None:
+        nuevo_estado = 1 if estado_actual == 2 else 2
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        update_consulta = "UPDATE T_ECOLampV0 SET LampOnOff = %s WHERE LampID = %s"
+        cursor.execute(update_consulta, (nuevo_estado, lamp_id))
         conn.commit()
+        cursor.close()
+        conn.close()
         estado_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Estado Actual Foco: {
             'Encendido' if nuevo_estado == 2 else 'Apagado'}</div>"
         toggle_button.button_type = 'success' if nuevo_estado == 2 else 'danger'
-    cursor.close()
-    conn.close()
     update_dashboard(None)
 
 
@@ -99,8 +109,9 @@ def obtener_datos_globales():
     df['fecha_creacion'] = pd.to_datetime(df['fecha_creacion'])
     return df
 
-
 # Función para actualizar el dashboard
+
+
 def update_dashboard(event):
     lamp_id = lamp_id_input.value
     usuario_id = user_id_input.value
@@ -147,9 +158,9 @@ def crear_graficos(lamp_id, usuario_id):
         total_kwh = datos_lamp['wh_por_hora'].sum() / 1000
         costo_total = total_kwh * 0.84
         horas_utilizadas = datos_lamp['LampOnOff'].sum()
-        vida_util = max(0, (1000 - horas_utilizadas) / 10)
+        vida_util = max(0, (36 - horas_utilizadas) / 36 * 100)
         consumo_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Consumo total en kWh: {
-            total_kwh} kWh (Bs {costo_total:.2f})</div>"
+            total_kwh:.4f} kWh (Bs {costo_total:.2f})</div>"
         vida_label.object = f"<div style='font-size: 20px; font-weight: bold;'>Tiempo de vida: {
             vida_util}%</div>"
 
@@ -191,8 +202,18 @@ def crear_graficos(lamp_id, usuario_id):
         p7.quad(top=hist_lamp_user, bottom=0,
                 left=edges_lamp_user[:-1], right=edges_lamp_user[1:], fill_color="#b4b4dc")
 
-        user_charts = pn.Column(p5, p6, p7)
-        tabs.append(("Gráficos de Usuario", user_charts))
+        p8 = figure(title="Relación fecha_creacion con UsuarioID",
+                    x_axis_type="datetime", sizing_mode="stretch_width", height=250)
+        p8.line(datos_usuario['fecha_creacion'], datos_usuario['UsuarioID'],
+                legend_label='UsuarioID', line_color='#b4b4dc')
+
+        grid_usuario = pn.GridSpec(sizing_mode='stretch_both', max_height=500)
+        grid_usuario[0, 0] = p5
+        grid_usuario[0, 1] = p6
+        grid_usuario[1, 0] = p7
+        grid_usuario[1, 1] = p8
+
+        tabs.append(("Gráficos de Usuario", grid_usuario))
 
     if not datos_globales.empty:
         # Torta en porcentaje de usuarios por fecha de creación
@@ -235,15 +256,21 @@ def crear_graficos(lamp_id, usuario_id):
         total_global_kwh = datos_globales['wh_por_hora'].sum() / 1000
         costo_global_total = total_global_kwh * 0.84
         consumo_global_label = pn.pane.Markdown(f"<div style='font-size: 20px; font-weight: bold;'>Consumo total de todas las lámparas: {
-                                                total_global_kwh} kWh (Bs {costo_global_total:.2f})</div>")
+                                                total_global_kwh:.4f} kWh (Bs {costo_global_total:.2f})</div>")
 
-        global_charts = pn.Column(p8, p9, p10, consumo_global_label)
-        tabs.append(("Gráficos Globales", global_charts))
+        grid_global = pn.GridSpec(sizing_mode='stretch_both', max_height=500)
+        grid_global[0, 0] = p8
+        grid_global[0, 1] = p9
+        grid_global[1, 0] = p10
+        grid_global[1, 1] = consumo_global_label
+
+        tabs.append(("Gráficos Globales", grid_global))
 
     return pn.Tabs(*tabs)
 
-
 # Función para actualizar el dashboard automáticamente cada 5 segundos
+
+
 def auto_update_dashboard():
     while True:
         time.sleep(5)
