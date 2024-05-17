@@ -7,9 +7,9 @@ from tkinter import messagebox, Scrollbar, Canvas, Frame
 
 # Configuración de la base de datos
 config_db = {
-    'user': 'root',
+    'user': 'rosario',
     'password': '',
-    'host': 'localhost',
+    'host': '',
     'database': 'DB_ECOLampV0',
 }
 
@@ -87,8 +87,8 @@ def toggle_estado_lampara(user_id, lamp_id):
     conn.close()
 
 def actualizar_boton_estado(estado):
-    color = "green" if estado == 2 else "red"
-    texto = "Encendido" if estado == 2 else "Apagado"
+    color = "red" if estado == 2 else "green"
+    texto = "Apagado" if estado == 2 else "Encendido"
     boton_estado.config(bg=color, text=texto)
     print("Botón de estado actualizado a:", texto)
 
