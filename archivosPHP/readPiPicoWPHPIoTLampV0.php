@@ -1,3 +1,4 @@
+<!-- readPiPicoWPHPIoTLampV0.php -->
 <?php
 // Configuración de la base de datos
 $servername = "localhost"; // Cambia esto si tu servidor MySQL está en otra dirección

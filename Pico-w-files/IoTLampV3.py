@@ -16,7 +16,7 @@ btn1 = Pin(18, Pin.IN, Pin.PULL_DOWN)
 ledR = Pin(6, Pin.OUT)
 ledG = Pin(7, Pin.OUT)
 foco = Pin(10, Pin.OUT)
-#foco = Pin(8, Pin.OUT)
+# foco = Pin(8, Pin.OUT)
 
 # Variables globales
 RGB = 0
@@ -37,20 +37,28 @@ sensores = Sensor(pinadc, pinsetpoint)
 wifi_init()
 
 # Función para mapear valores
+
+
 def map_value(value, in_min, in_max, out_min, out_max):
     return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 # Función para calcular el consumo energético
+
+
 def calcular_consumo(tiempo_inicio, potencia_lampara):
     tiempo_actual = time.time()
-    tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / 3600  # Convertir segundos a horas
+    tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / \
+        3600  # Convertir segundos a horas
     consumo_wh = potencia_lampara * tiempo_transcurrido
     consumo_kwh = consumo_wh / 1000
     return consumo_kwh
 
 # Función para enviar datos
+
+
 def handleSubmit():
-    global VlampOnOff, tiempo_inicio  # Declarar VlampOnOff y tiempo_inicio como variables globales
+    # Declarar VlampOnOff y tiempo_inicio como variables globales
+    global VlampOnOff, tiempo_inicio
     ledR.toggle()  # Indica que se enviará un registro al servidor de DB
 
     # Leer valores de los sensores
@@ -83,7 +91,8 @@ def handleSubmit():
     ssetpoint = map_value(ssetpoint, 0, 65535, 0, 50)
 
     # Imprimir valores de depuración
-    print(f"Lamp_id: {lamp_id}, Usuario_id: {usuario_id}, LM35 Temp: {slm35}°C, Temp Int: {stempint}°C, SetPoint: {ssetpoint}, Consumo kWh: {consumo_kwh}, LampOnOff: {VlampOnOff}")
+    print(f"Lamp_id: {lamp_id}, Usuario_id: {usuario_id}, LM35 Temp: {slm35}°C, Temp Int: {
+          stempint}°C, SetPoint: {ssetpoint}, Consumo kWh: {consumo_kwh}, LampOnOff: {VlampOnOff}")
 
     # Realizar la solicitud POST
     url = "http://192.168.91.184/insertPiPicoWPHPIoTLampV0.php"
@@ -97,15 +106,19 @@ def handleSubmit():
         'LampOnOff': VlampOnOff
     }
     datos_json = json.dumps(data)
-    response = urequests.post(url, data=datos_json, headers={'Content-Type': 'application/json'})
+    response = urequests.post(url, data=datos_json, headers={
+                              'Content-Type': 'application/json'})
     print(response.text)
     response.close()
 
 # URL del script PHP con parámetro LampID y UsuarioID
+
+
 def handleReadAvanzado():
     lamp_id = "lamp1"  # Cambia esto al LampID que deseas consultar
     usuario_id = "user1"  # Cambia esto al UsuarioID que deseas consultar
-    url = f"http://192.168.91.184/readPiPicoWPHPIoTLampV0regespLampID.php?LampID={lamp_id}&UsuarioID={usuario_id}"
+    url = f"http://192.168.91.184/readPiPicoWPHPIoTLampV0regespLampID.php?LampID={
+        lamp_id}&UsuarioID={usuario_id}"
     # Realizar una solicitud GET a la URL del script PHP con el parámetro LampID y UsuarioID
     response = urequests.get(url)
 
@@ -114,7 +127,8 @@ def handleReadAvanzado():
         # Leer y decodificar los datos JSON de la respuesta
         ultimo_registro = response.json()
         # Imprimir el último registro obtenido
-        print("Último registro obtenido para LampID y UsuarioID:", lamp_id, usuario_id)
+        print("Último registro obtenido para LampID y UsuarioID:",
+              lamp_id, usuario_id)
         print(ultimo_registro)
         print("LampOnOff:", ultimo_registro['LampOnOff'])
         print("\n")  # Separador para cada registro
@@ -126,8 +140,11 @@ def handleReadAvanzado():
     return int(ultimo_registro['LampOnOff'])
 
 # Función de manejo de interrupciones
+
+
 def handle_interrupt(pin):
     handleSubmit()
+
 
 # Configurar interrupción externa en el pin 18
 btn4.irq(trigger=Pin.IRQ_RISING, handler=handle_interrupt)
@@ -136,7 +153,7 @@ btn4.irq(trigger=Pin.IRQ_RISING, handler=handle_interrupt)
 estadoFoco = 0
 while True:
     led.toggle()
-    #estadoFoco = handleSubmit()  # subiendo datos 
+    # estadoFoco = handleSubmit()  # subiendo datos
     estadoFoco = handleReadAvanzado()
     VlampOnOff = estadoFoco
     if VlampOnOff == 1:
@@ -146,4 +163,3 @@ while True:
         ledB.value(1)
         foco.value(1)
     time.sleep(1)
-
