@@ -10,12 +10,12 @@ fecha_creacion TIMESTAMP DEFAULT
 CURRENT_TIMESTAMP,
 temp_value FLOAT NOT NULL,
 temp_int INT NOT NULL,
-set_point INT NOT NULL,
+sep_point INT NOT NULL,
 wh_por_hora FLOAT NOT NULL,
 LampOnOff INT NOT NULL);
 
 -- Datos para pruebas
-INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `set_point`, `wh_por_hora`, `LampOnOff`) VALUES
+INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `sep_point`, `wh_por_hora`, `LampOnOff`) VALUES
 (1, 'lamp1', 'user1', '2024-05-16 22:27:53', 22.5, 22, 20, 0.5, 1),
 (2, 'lamp2', 'user2', '2024-05-16 22:27:53', 23, 23, 21, 0.6, 2),
 (3, 'lamp1', 'user1', '2024-05-16 22:27:53', 22.8, 22, 20, 0.5, 1),
@@ -38,7 +38,7 @@ INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `tem
 (20, 'lamp3', 'user4', '2024-05-16 22:27:53', 22.5, 20, 18, 0.3, 2);
 
 -- Registros para lamp1 con wh_por_hora corregido a 0.5
-INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `set_point`, `wh_por_hora`, `LampOnOff`) VALUES
+INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `sep_point`, `wh_por_hora`, `LampOnOff`) VALUES
 (21, 'lamp1', 'user1', '2024-05-17 03:28:03', 22.5, 22, 20, 90, 2),
 (22, 'lamp1', 'user1', '2024-05-17 03:28:03', 22.7, 22, 20,90, 2),
 (23, 'lamp1', 'user1', '2024-05-17 03:28:03', 22.9, 22, 20, 90, 2),
@@ -51,7 +51,7 @@ INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `tem
 (30, 'lamp1', 'user1', '2024-05-17 03:28:03', 23.6, 23, 20, 90,2);
 
 -- Registros para lamp2 con wh_por_hora corregido a 0.6
-INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `set_point`, `wh_por_hora`, `LampOnOff`) VALUES
+INSERT INTO `t_ecolampv0` (`Nreg`, `LampID`, `UsuarioID`, `fecha_creacion`, `temp_value`, `temp_int`, `sep_point`, `wh_por_hora`, `LampOnOff`) VALUES
 (31, 'lamp2', 'user2', '2024-05-17 03:28:03', 22.5, 22, 20,90, 2),
 (32, 'lamp2', 'user2', '2024-05-17 03:28:03', 22.7, 22, 20, 90, 2),
 (33, 'lamp2', 'user2', '2024-05-17 03:28:03', 22.9, 22, 20, 90, 2),
