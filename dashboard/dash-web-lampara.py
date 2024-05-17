@@ -2,6 +2,7 @@ import mysql.connector
 import pandas as pd
 import numpy as np
 from bokeh.plotting import figure
+from bokeh.models import DatetimeTickFormatter, FixedTicker
 import panel as pn
 import threading
 import time
@@ -64,17 +65,42 @@ def crear_graficos(lamp_id):
     if datos.empty:
         return pn.pane.Markdown("No se encontraron datos para el LampID proporcionado.")
 
-    # Creación de gráficos
+    # Verificar la estructura de los datos
+    print(datos['fecha_creacion'])
+
+    # Convertir las fechas a formato timestamp para ticks
+    tick_values = [datos['fecha_creacion'][i] for i in range(0, len(datos), max(1, len(datos)//10))]
+    tick_timestamps = [x.timestamp() * 1000 for x in tick_values]
+
+    # Creación de gráficos de línea
     p1 = figure(title="Relación fecha_creacion con LampOnOff", x_axis_type="datetime", sizing_mode="stretch_width", height=250)
     p1.line(datos['fecha_creacion'], datos['LampOnOff'], legend_label='Estado de la Lámpara', line_color='#b4b4dc')
+    p1.xaxis.formatter = DatetimeTickFormatter(
+        hours="%H:%M",
+        minutes="%H:%M",
+        seconds="%H:%M:%S"
+    )
+    p1.xaxis.ticker = FixedTicker(ticks=tick_timestamps)
+    p1.xaxis.major_label_orientation = 3.14 / 4  # Rota las etiquetas para mejor legibilidad
+    p1.xaxis.major_label_overrides = {tick: pd.to_datetime(tick/1000, unit='s').strftime('%H:%M') for tick in tick_timestamps}
 
     p3 = figure(title="Relación fecha_creacion con temp_value", x_axis_type="datetime", sizing_mode="stretch_width", height=250)
     p3.line(datos['fecha_creacion'], datos['temp_value'], legend_label='Valor Temperatura', line_color='#b4b4dc')
+    p3.xaxis.formatter = DatetimeTickFormatter(
+        hours="%H:%M",
+        minutes="%H:%M",
+        seconds="%H:%M:%S"
+    )
+    p3.xaxis.ticker = FixedTicker(ticks=tick_timestamps)
+    p3.xaxis.major_label_orientation = 3.14 / 4  # Rota las etiquetas para mejor legibilidad
+    p3.xaxis.major_label_overrides = {tick: pd.to_datetime(tick/1000, unit='s').strftime('%H:%M') for tick in tick_timestamps}
 
+    # Creación de gráficos de histograma
     hist, edges = np.histogram(datos['LampOnOff'], bins=np.arange(0, 3) - 0.5, density=True)
     p2 = figure(title="Histograma de LampOnOff", sizing_mode="stretch_width", height=250)
     p2.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color="#b4b4dc")
 
+    # Histograma con datos de fecha en el eje X y temp_value en el eje Y
     hist_temp, edges_temp = np.histogram(datos['temp_value'], bins=15, density=True)
     p4 = figure(title="Histograma de temp_value", sizing_mode="stretch_width", height=250)
     p4.quad(top=hist_temp, bottom=0, left=edges_temp[:-1], right=edges_temp[1:], fill_color="#b4b4dc")
